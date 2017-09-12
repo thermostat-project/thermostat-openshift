@@ -7,66 +7,10 @@ objects:
 ## BUILD CONFIGS ##
 ###################
 ##### GATEWAY #####
-# gateway builder image bc
-- apiVersion: "v1"
-  kind: "BuildConfig"
-  apiVersion: "v1"
-  metadata:
-    name: "thermostat-gateway-builder-bc"
-    labels:
-      app-group: "thermostat-simple-setup"
-  spec:
-    triggers:
-      - type: "ConfigChange"
-      - type: "ImageChange"
-        imageChange: {}
-    source:
-      type: "Git"
-      git:
-        uri: "https://github.com/zzambers/openshift-stuff.git"
-      contextDir: "builder-images/thermostat-web-gateway-builder"
-    strategy:
-      type: "Docker"
-      dockerStrategy:
-        from:
-          kind: "ImageStreamTag"
-          name: "thermostat-openjdk18-openshift:latest"
-    output:
-      to:
-        kind: "ImageStreamTag"
-        name: "thermostat-gateway-builder:latest"
-    runPolicy: "Serial"
-# gateway artifacts image bc
-- apiVersion: "v1"
-  kind: "BuildConfig"
-  apiVersion: "v1"
-  metadata:
-    name: "thermostat-gateway-artifacts-bc"
-    labels:
-      app-group: "thermostat-simple-setup"
-  spec:
-    triggers:
-      - type: "ConfigChange"
-      - type: "ImageChange"
-        imageChange: {}
-    source:
-      type: "Git"
-      git:
-        uri: "https://github.com/zzambers/thermostat-ng_web-gateway.git"
-    strategy:
-      type: "Source"
-      sourceStrategy:
-        from:
-          kind: "ImageStreamTag"
-          name: "thermostat-gateway-builder:latest"
-    output:
-      to:
-        kind: "ImageStreamTag"
-        name: "thermostat-gateway-artifacts:latest"
-    runPolicy: "Serial"
 # gateway image bc
 - apiVersion: "v1"
   kind: "BuildConfig"
+  apiVersion: "v1"
   metadata:
     name: "thermostat-gateway-bc"
     labels:
@@ -74,30 +18,18 @@ objects:
   spec:
     triggers:
       - type: "ConfigChange"
-      - imageChange: {}
-        type: "ImageChange"
+      - type: "ImageChange"
+        imageChange: {}
     source:
-      type: "Dockerfile"
-      dockerfile: |
-        FROM thermostat-openjdk18-openshift:latest
-        USER root
-        COPY deployments/* /deployments/
-        RUN bash /deployments/helper-scripts/runtime-image-prepare.sh
-        EXPOSE 30000
-        USER 1001
-      images:
-      - from:
-          kind: "ImageStreamTag"
-          name: "thermostat-gateway-artifacts:latest"
-        paths:
-        - destinationDir: "./deployments"
-          sourcePath: "/deployments"
+      type: "Git"
+      git:
+        uri: "git://icedtea.classpath.org/mirror/git/thermostat-ng-web-gateway"
     strategy:
-      type: "Docker"
-      dockerStrategy:
+      type: "Source"
+      sourceStrategy:
         from:
           kind: "ImageStreamTag"
-          name: "thermostat-openjdk18-openshift:latest"
+          name: "thermostat-gateway-client-builder:latest"
     output:
       to:
         kind: "ImageStreamTag"
@@ -108,7 +40,7 @@ objects:
 - apiVersion: "v1"
   kind: "BuildConfig"
   metadata:
-    name: "thermostat-client-artifacts-bc"
+    name: "thermostat-gateway-client-bc"
     labels:
       app-group: "thermostat-simple-setup"
   spec:
@@ -119,113 +51,23 @@ objects:
     source:
       type: "Git"
       git:
-        uri: "https://github.com/zzambers/thermostat-ng_web-client.git"
+        uri: "git://icedtea.classpath.org/mirror/git/thermostat-ng-web-client"
     strategy:
       type: "Source"
       sourceStrategy:
         from:
           kind: "ImageStreamTag"
-          name: "thermostat-nodejs-6-centos7:latest"
+          name: "thermostat-gateway:latest"
+        scripts: "image:///usr/libexec/s2i/webclient"
         env:
         - name: "GATEWAY_URL"
           value: "${GATEWAY_URL}"
     output:
       to:
         kind: "ImageStreamTag"
-        name: "thermostat-client-artifacts:latest"
-    runPolicy: "Serial"
-# gateway + client image bc
-- apiVersion: "v1"
-  kind: "BuildConfig"
-  metadata:
-    name: "thermostat-gateway-client-bc"
-    labels:
-      app-group: "thermostat-simple-setup"
-  spec:
-    triggers:
-      - type: "ConfigChange"
-      - type: "ImageChange"
-        imageChange: {}
-    source:
-      type: "Dockerfile"
-      dockerfile: |
-        FROM thermostat-gateway-image:latest
-        USER root
-        COPY dist/* /deployments/web-client/
-        USER 1001
-      images:
-      - from:
-          kind: "ImageStreamTag"
-          name: "thermostat-client-artifacts:latest"
-        paths:
-        - destinationDir: "./dist"
-          sourcePath: "/opt/app-root/src/dist"
-    strategy:
-      type: "Docker"
-      dockerStrategy:
-        from:
-          kind: "ImageStreamTag"
-          name: "thermostat-gateway:latest"
-    output:
-      to:
-        kind: "ImageStreamTag"
         name: "thermostat-gateway-client:latest"
     runPolicy: "Serial"
 ##### AGENT #####
-# openjdk-8 base image for agent bc
-- apiVersion: "v1"
-  kind: "BuildConfig"
-  metadata:
-    name: "thermostat-openjdk-8-64bit-maven-bc"
-    labels:
-      app-group: "thermostat-simple-setup"
-  spec:
-    triggers:
-    - type: "ConfigChange"
-    - imageChange: {}
-      type: "ImageChange"
-    source:
-      type: "Git"
-      git:
-        uri: "https://github.com/jerboaa/openjdk-8-maven-docker.git"
-    strategy:
-      type: "Docker"
-      dockerStrategy:
-        from:
-          kind: "ImageStreamTag"
-          name: "thermostat-s2i-base-centos7:latest"
-    output:
-      to:
-        kind: "ImageStreamTag"
-        name: "thermostat-openjdk-8-64bit-maven:latest"
-    runPolicy: "Serial"
-# agent builder bc
-- apiVersion: "v1"
-  kind: "BuildConfig"
-  metadata:
-    name: "thermostat-agent-builder-bc"
-    labels:
-      app-group: "thermostat-simple-setup"
-  spec:
-    triggers:
-    - type: "ConfigChange"
-    - imageChange: {}
-      type: "ImageChange"
-    source:
-      type: "Git"
-      git:
-        uri: "https://github.com/thermostat-project/thermostat-agent-container.git"
-    strategy:
-      type: "Docker"
-      dockerStrategy:
-        from:
-          kind: "ImageStreamTag"
-          name: "thermostat-openjdk-8-64bit-maven:latest"
-    output:
-      to:
-        kind: "ImageStreamTag"
-        name: "thermostat-agent-builder:latest"
-    runPolicy: "Serial"
 # agent bc
 - apiVersion: "v1"
   kind: "BuildConfig"
@@ -241,47 +83,19 @@ objects:
     source:
       type: "Git"
       git:
-        uri: "https://github.com/zzambers/thermostat-ng_agent.git"
+        uri: "git://icedtea.classpath.org/mirror/git/thermostat-ng-agent"
     strategy:
       type: "Source"
       sourceStrategy:
         from:
           kind: "ImageStreamTag"
-          name: "thermostat-agent-builder:latest"
+          name: "thermostat-agent-wildfly-ex-builder:latest"
     output:
       to:
         kind: "ImageStreamTag"
         name: "thermostat-agent:latest"
     runPolicy: "Serial"
 ##### WILDFLY-TESTAPP #####
-# wildfly testapp builder bc
-- apiVersion: "v1"
-  kind: "BuildConfig"
-  metadata:
-    name: "thermostat-wildfly-testapp-builder-bc"
-    labels:
-      app-group: "thermostat-simple-setup"
-  spec:
-    triggers:
-    - type: "ConfigChange"
-    - imageChange: {}
-      type: "ImageChange"
-    source:
-      type: "Git"
-      git:
-        uri: "https://github.com/zzambers/openshift-stuff.git"
-      contextDir: "builder-images/wildfly-thermostat-ng-agent-builder"
-    strategy:
-      type: "Docker"
-      dockerStrategy:
-        from:
-          kind: "ImageStreamTag"
-          name: "thermostat-agent:latest"
-    output:
-      to:
-        kind: "ImageStreamTag"
-        name: "thermostat-wildfly-testapp-builder:latest"
-    runPolicy: "Serial"
 # wildfly testapp
 - apiVersion: "v1"
   kind: "BuildConfig"
@@ -304,7 +118,8 @@ objects:
       sourceStrategy:
         from:
           kind: "ImageStreamTag"
-          name: "thermostat-wildfly-testapp-builder:latest"
+          name: "thermostat-agent:latest"
+        scripts: "image:///usr/libexec/s2i"
     output:
       to:
         kind: "ImageStreamTag"
@@ -323,52 +138,21 @@ objects:
       app-group: "thermostat-simple-setup"
   spec:
     dockerImageRepository: "registry.access.redhat.com/rhscl/mongodb-32-rhel7"
-##### GATEWAY #####
-# base image for gateway
+##### GATEWAY + CLIENT #####
+# gateway + client builder image
 - apiVersion: "v1"
   kind: "ImageStream"
   metadata:
-    name: "thermostat-openjdk18-openshift"
+    name: "thermostat-gateway-client-builder"
     labels:
       app-group: "thermostat-simple-setup"
   spec:
-    dockerImageRepository: "registry.access.redhat.com/redhat-openjdk-18/openjdk18-openshift"
-# gateway builder image
-- apiVersion: "v1"
-  kind: "ImageStream"
-  metadata:
-    name: "thermostat-gateway-builder"
-    labels:
-      app-group: "thermostat-simple-setup"
-# gateway artifacts image
-- apiVersion: "v1"
-  kind: "ImageStream"
-  metadata:
-    name: "thermostat-gateway-artifacts"
-    labels:
-      app-group: "thermostat-simple-setup"
-# gateway runtime image
+    dockerImageRepository: "docker.io/icedtea/thermostat-web-gateway-client-builder"
+# gateway image
 - apiVersion: "v1"
   kind: "ImageStream"
   metadata:
     name: "thermostat-gateway"
-    labels:
-      app-group: "thermostat-simple-setup"
-##### CLIENT #####
-# base image for client (artifacts image)
-- apiVersion: "v1"
-  kind: "ImageStream"
-  metadata:
-    name: "thermostat-nodejs-6-centos7"
-    labels:
-      app-group: "thermostat-simple-setup"
-  spec:
-    dockerImageRepository: "centos/nodejs-6-centos7"
-# client artifacts image
-- apiVersion: "v1"
-  kind: "ImageStream"
-  metadata:
-    name: "thermostat-client-artifacts"
     labels:
       app-group: "thermostat-simple-setup"
 # gateway + client image
@@ -378,30 +162,16 @@ objects:
     name: "thermostat-gateway-client"
     labels:
       app-group: "thermostat-simple-setup"
-##### AGENT #####
-# base image for openjdk-8 base image
+##### AGENT + WILDFLY-TESTAPP #####
+# agent + wildfly testapp builder image
 - apiVersion: "v1"
   kind: "ImageStream"
   metadata:
-    name: "thermostat-s2i-base-centos7"
+    name: "thermostat-agent-wildfly-ex-builder"
     labels:
       app-group: "thermostat-simple-setup"
   spec:
-    dockerImageRepository: "centos/s2i-base-centos7"
-# openjdk-8 base image for agent
-- apiVersion: "v1"
-  kind: "ImageStream"
-  metadata:
-    name: "thermostat-openjdk-8-64bit-maven"
-    labels:
-      app-group: "thermostat-simple-setup"
-# agent builder image
-- apiVersion: "v1"
-  kind: "ImageStream"
-  metadata:
-    name: "thermostat-agent-builder"
-    labels:
-      app-group: "thermostat-simple-setup"
+    dockerImageRepository: "docker.io/icedtea/thermostat-agent-wildfly-ex-build"
 # agent image
 - apiVersion: "v1"
   kind: "ImageStream"
@@ -409,21 +179,58 @@ objects:
     name: "thermostat-agent"
     labels:
       app-group: "thermostat-simple-setup"
-##### WILDFLY-TESTAPP #####
-# wildfly testapp builder image
-- apiVersion: "v1"
-  kind: "ImageStream"
-  metadata:
-    name: "thermostat-wildfly-testapp-builder"
-    labels:
-      app-group: "thermostat-simple-setup"
-# wildfly testapp image
+# agent + wildfly testapp image
 - apiVersion: "v1"
   kind: "ImageStream"
   metadata:
     name: "thermostat-wildfly-testapp"
     labels:
       app-group: "thermostat-simple-setup"
+#############
+## SECRETS ##
+#############
+- apiVersion: "v1"
+  kind: "Secret"
+  metadata:
+    name: "gateway-cert"
+  data: 
+    # certificate from exported from:
+    # http://icedtea.classpath.org/hg/thermostat-ng/web-gateway/file/tip/distribution/src/cert/thermostat.jks
+    gateway.crt: |- 
+      LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tDQpNSUlGbFRDQ0EzMmdBd0lCQWdJRVJDMTlFVEFOQmdr
+      cWhraUc5dzBCQVFzRkFEQjdNUXN3Q1FZRFZRUUdFd0pWDQpVekVYTUJVR0ExVUVDQk1PVG05eWRHZ2dR
+      MkZ5YjJ4cGJtRXhFREFPQmdOVkJBY1RCMUpoYkdWcFoyZ3hFREFPDQpCZ05WQkFvVEIxSmxaQ0JJWVhR
+      eEVEQU9CZ05WQkFzVEIxSmxaQ0JJWVhReEhUQWJCZ05WQkFNVEZGUm9aWEp0DQpiM04wWVhRZ1JHVjJa
+      V3h2Y0dWeU1CNFhEVEUzTURZeU1ERTBNelkxTWxvWERURTRNRFl5TURFME16WTFNbG93DQplekVMTUFr
+      R0ExVUVCaE1DVlZNeEZ6QVZCZ05WQkFnVERrNXZjblJvSUVOaGNtOXNhVzVoTVJBd0RnWURWUVFIDQpF
+      d2RTWVd4bGFXZG9NUkF3RGdZRFZRUUtFd2RTWldRZ1NHRjBNUkF3RGdZRFZRUUxFd2RTWldRZ1NHRjBN
+      UjB3DQpHd1lEVlFRREV4UlVhR1Z5Ylc5emRHRjBJRVJsZG1Wc2IzQmxjakNDQWlJd0RRWUpLb1pJaHZj
+      TkFRRUJCUUFEDQpnZ0lQQURDQ0Fnb0NnZ0lCQUxZZm5mcytYNkVVakpsWmdRc0QwK0h1Z1NMSTFsZjNY
+      MTlMa0djNkJsVlZRbE56DQp2OUUzZjduTWFjclZiQzlCOFRtSkgrVTExdHU4b1NSUmJjYi9jK1kyOFBL
+      TVZRZVlXNzFzQXgwd0FFa254aE1uDQpaV3I4UXNYaHFmTTZXQWpiYnlTQnRWalFTVW15TEVHRVVvZ3JF
+      QlFoYjFFRjMrOEtLWkcybzdndjlLNzJXQy9LDQpoWVJSc0NiME51UEp6cDVBelZaNS9SMk1sbGVPd0tz
+      bUV4NitEVDFmclQrcVdINjk4VWdjS3FreU1iOVNuMWxpDQp0cmhmTUc5RVp6M21WOWJ2am1rVGdsLy9D
+      L2NEcS9lcEhhT0xNcUFWOTRuMmpJRmJMdXlRbFlpTTV1QmQva0p1DQp3ZC9GendUbXF3a0NoK2IxMGdC
+      V0QrNVJ1TTJLVHRlV201K05XVDFXbnM2MWJESkFIeitxRjEvb0N1V1ozNGdiDQpFN2xsMW80Y0QrQnJ6
+      QUI5SHoxaWZ4aDVhVkphcFg5U1NIWmRnWU92L0trdjJVS1NLZjM3ZFZZWTNhcDlKOWxYDQpjSGFEVGo1
+      c1VJdWNORk9KdU0xc3BJb3pqYjJIbzh3dEFxMFNXd2NocGxnRXVmYUQ0NHZ1ZkNSQXRjZHE1eHoyDQpF
+      aXk0RTNmVUY4TDRheERUSTBjdTdSS2JpbzM5V2ZPYjhwbTZvVVNVN1R2U2srTncyWjVDUndqMnRKWDBO
+      SzdPDQpKbTVML0huaHM4N3hDVGRCaEdnMUluakxsRStkOEkrYjk4UGF5ck5EbnlmTVhkYm0rZHZncHpy
+      WTh3YW9vNFVqDQpnZGlQNDJaM285QStsV3NiZnpBdDZPV0p2Vm12SU5kcVI0c25Pb2Y4VkgvSnVpQ2xl
+      a3VzL2tSOFBBVC9BZ01CDQpBQUdqSVRBZk1CMEdBMVVkRGdRV0JCU3dSS1JTZ2hkK0VGc0lRWmd4V0Jp
+      VnhCUzdSekFOQmdrcWhraUc5dzBCDQpBUXNGQUFPQ0FnRUFNN0VGeUlrcythRmI0UVlnODE5S0xtMEh3
+      ckN1cjRJWWZXTmw1V01DUVV0Y2hwSXE0TG90DQo4ekdjbFVmT0gvb1hwUmhSTEViY3VETnhyN1JrcU9U
+      SnhXUHhKVFBsUjVyQUpCeU9mYWVtZVpWZEN3enpwcERJDQpjYUlJcE1vbExMQmpXcWxiRUxseU9LZzBI
+      REROVGdFaU11MEJDTDFaeFhvTFo3ZFNmdzJLbG9VdWRuamhCYXk3DQo1dndTMVd5Y01oVXc0ZDltQm1B
+      T2E3NDBqYnZ5a2VadldFOWNWWmVMN3AzVTNwc1NQN3NpdGdhWFg3dkxmdytBDQpQRXZYNk1PZ2VDUUpS
+      YWY0ZkJEeUs2WThMaGlUVU9RcWw5b202WVg1YTZnb0h3VlZVR2I0amJIMXdkdmllcWgxDQp2RnJZSi9a
+      UTJzOUNJKzlDeUtka1hrQVNHL2RyaUtwc3I2enlXMWVlSUUvLzRFRmRZUzI0VlRXQm0vM1NJV1kxDQpP
+      S3E0dEpoS09XSjVLVXFFTWd3MGV3VzREd2xqQ1ZpSXl4OWVML1diQ1grSTVGeUJBNUZhd1VoeCs3ZmhE
+      Y0xoDQovRmRkV0ZvVXloZjNjaFhFbmQ4V1JwRTYyWmY5TkxDWGtCNi9vbWxNZmVOdGdVRklhaHN2ZEJo
+      akRrdGN3cmVzDQppSTFHWlp4dXNCYWo4eXB5ZkZhbUZkVGg3aWZqaXN4eDhtTmI4aklnNkhPc2RXaDlJ
+      bUY0bC9GMzhtRVBjT3lqDQpyNWQxV2JGd2dpUHpGSHhBY2ZTVnNoQXhlamliTXhNQkRuQzdVYWlWTWlD
+      dlJzdlVKZk8yQWUxb21LWmZYUkZtDQo5NXJzRWpkOGF1Nk02SGRqZms5a2xDRENERkhEV0V2RDJMWm8x
+      Uno2WklQMUVDWVpDWDBEU2hzPQ0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQ==
 ########################
 ## DEPLOYMENT CONFIGS ##
 ########################
@@ -546,7 +353,7 @@ objects:
           - name: "THERMOSTAT_AGENT_PASSWORD"
             value: "agent-pwd"
           - name: "THERMOSTAT_AGENT_USERNAME"
-            value: "foo-agent-user"
+            value: "agent"
           - name: "THERMOSTAT_COMMANDS_URL"
             value: "wss://thermostat-gateway-client-svc:30000/commands/v1"
           - name: "THERMOSTAT_HOST_CPU_URL"
@@ -558,11 +365,28 @@ objects:
           - name: "THERMOSTAT_HOST_OVERVIEW_URL"
             value: "https://thermostat-gateway-client-svc:30000/systems/0.0.1"
           - name: "THERMOSTAT_JVM_OVERVIEW_URL"
-            value: "https://thermostat-gateway-client-svc:30000/jvms/0.0.1/"
+            value: "https://thermostat-gateway-client-svc:30000/jvms/0.0.1"
           - name: "THERMOSTAT_VM_GC_URL"
-            value: "https://thermostat-gateway-client-svc:30000/jvm-gc/0.0.2"
+            value: "https://thermostat-gateway-client-svc:30000/jvm-gc/0.0.3"
           - name: "THERMOSTAT_VM_MEMORY_URL"
-            value: "https://thermostat-gateway-client-svc:30000/jvm-memory/0.0.2"
+            value: "https://thermostat-gateway-client-svc:30000/jvm-memory/0.0.3"
+          - name: "THERMOSTAT_VM_IO_URL"
+            value: "https://thermostat-gateway-client-svc:30000/jvm-io/0.0.1"
+          - name: "THERMOSTAT_TLS_CERT_FILE"
+            value: "/etc/gateway-cert-secret/gateway.crt"
+          - name: "THERMOSTAT_KEYSTORE_PASS"
+            value: "${KEYSTORE_PASS}"
+          - name: "THERMOSTAT_DISABLE_HOSTNAME_VERIFICATION"
+            value: "true"
+          volumeMounts:
+            - name: "gateway-cert-volume"
+              mountPath: "/etc/gateway-cert-secret"
+              readOnly: true
+        volumes:
+          - name: "gateway-cert-volume"
+            secret:
+              secretName: "gateway-cert"
+              defaultMode: 0440
     selector:
       app: "thermostat-wildfly-testapp-app"
     replicas: 1
@@ -655,9 +479,13 @@ objects:
 ################
 parameters:
 # URL on which thermostat gateway resides as seen from client (browser),
-# used in web-client's buildconfig (see thermostat-client-artifacts-bc higher)
+# used in web-client's buildconfig (see thermostat-gateway-client-bc higher)
 # for example:
 # https://thermostat-gateway-client-route-thermostat-test.192.168.1.16.xip.io
 - name: "GATEWAY_URL"
   description: "URL of thermostat gateway (used for client build config)"
   required: true
+- name: "KEYSTORE_PASS"
+  description: "Password for the keystore holding the trusted certificate for the web gateway"
+  generate: "expression"
+  from: "[a-zA-Z0-9_]{20}"
