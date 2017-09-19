@@ -10,7 +10,6 @@ objects:
 # gateway image bc
 - apiVersion: "v1"
   kind: "BuildConfig"
-  apiVersion: "v1"
   metadata:
     name: "thermostat-gateway-bc"
     labels:
@@ -488,4 +487,4 @@ parameters:
 - name: "KEYSTORE_PASS"
   description: "Password for the keystore holding the trusted certificate for the web gateway"
   generate: "expression"
-  from: "[a-zA-Z0-9_]{20}"
+  from: "[a-zA-Z0-9]{20}"
