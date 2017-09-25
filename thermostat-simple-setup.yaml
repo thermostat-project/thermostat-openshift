@@ -58,9 +58,6 @@ objects:
           kind: "ImageStreamTag"
           name: "thermostat-gateway:latest"
         scripts: "image:///usr/libexec/s2i/webclient"
-        env:
-        - name: "GATEWAY_URL"
-          value: "${GATEWAY_URL}"
     output:
       to:
         kind: "ImageStreamTag"
@@ -477,13 +474,6 @@ objects:
 ## PARAMETERS ##
 ################
 parameters:
-# URL on which thermostat gateway resides as seen from client (browser),
-# used in web-client's buildconfig (see thermostat-gateway-client-bc higher)
-# for example:
-# https://thermostat-gateway-client-route-thermostat-test.192.168.1.16.xip.io
-- name: "GATEWAY_URL"
-  description: "URL of thermostat gateway (used for client build config)"
-  required: true
 - name: "KEYSTORE_PASS"
   description: "Password for the keystore holding the trusted certificate for the web gateway"
   generate: "expression"
