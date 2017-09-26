@@ -298,8 +298,7 @@ objects:
             name: "thermostat-mongo-storage"
         volumes:
         - name: "thermostat-mongo-storage"
-          persistentVolumeClaim:
-            claimName: "thermostat-mongo-storage"
+          emptyDir: {}
     selector:
       app: "thermostat-mongodb-app"
     replicas: 1
@@ -523,25 +522,6 @@ objects:
       name: "thermostat-wildfly-testapp-svc"
     port:
       targetPort: "8080"
-############
-# STORAGE ##
-############
-# OpenShift Online 3 appears to require that images with VOLUME directives
-# have a corresponding mount. This PVC satisifies the requirement for the
-# MongoDB storage pod.
-# https://bugzilla.redhat.com/show_bug.cgi?id=1318542
-- apiVersion: "v1"
-  kind: "PersistentVolumeClaim"
-  metadata:
-    name: "thermostat-mongo-storage"
-    labels:
-      app-group: "thermostat-online-starter"
-  spec:
-    accessModes:
-    - "ReadWriteOnce"
-    resources:
-      requests:
-        storage: "1Gi"
 ################
 ## PARAMETERS ##
 ################
