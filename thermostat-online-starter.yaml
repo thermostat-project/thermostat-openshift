@@ -248,6 +248,12 @@ objects:
       bUY0bC9GMzhtRVBjT3lqDQpyNWQxV2JGd2dpUHpGSHhBY2ZTVnNoQXhlamliTXhNQkRuQzdVYWlWTWlD
       dlJzdlVKZk8yQWUxb21LWmZYUkZtDQo5NXJzRWpkOGF1Nk02SGRqZms5a2xDRENERkhEV0V2RDJMWm8x
       Uno2WklQMUVDWVpDWDBEU2hzPQ0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQ==
+- apiVersion: "v1"
+  kind: "Secret"
+  metadata:
+    name: "basic-auth-config"
+  stringData:
+    basic-config.properties: "${BASIC_AUTH_CONFIG}"
 ########################
 ## DEPLOYMENT CONFIGS ##
 ########################
@@ -342,6 +348,8 @@ objects:
             value: "mongodb://thermostat-mongodb-svc:27017"
           - name: "MONGO_USERNAME"
             value: "mongo"
+          - name: "BASIC_AUTH_CONFIG"
+            value: "/etc/basic-auth-config/basic-config.properties"
             # OSO Starter: Limit Java heap size to prevent OOM
           - name: "JAVA_TOOL_OPTIONS"
             value: "-Xmx128m"
@@ -349,6 +357,15 @@ objects:
           resources:
             limits:
               memory: "256Mi"
+          volumeMounts:
+            - name: "basic-auth-volume"
+              mountPath: "/etc/basic-auth-config"
+              readOnly: true
+        volumes:
+          - name: "basic-auth-volume"
+            secret:
+              secretName: "basic-auth-config"
+              defaultMode: 0440
     selector:
       app: "thermostat-gateway-client-app"
     replicas: 1
@@ -530,3 +547,9 @@ parameters:
   description: "Password for the keystore holding the trusted certificate for the web gateway"
   generate: "expression"
   from: "[a-zA-Z0-9]{20}"
+- name: "BASIC_AUTH_CONFIG"
+  description: "Configuration for Basic authentication for the web gateway"
+  value: |-
+    agent=agent-pwd,r-thermostat,w-thermostat,u-thermostat,d-thermostat,receiver_provider-commands,thermostat
+    client=client-pwd,r-thermostat,kill_vm-commands,ping-commands,thermostat,byteman-commands
+  required: true
