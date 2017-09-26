@@ -1,0 +1,95 @@
+apiVersion: "v1"
+kind: "Template"
+metadata:
+  name: "thermostat-mongodb-online-starter"
+objects:
+###################
+## IMAGE STREAMS ##
+###################
+#### MONGO #####
+# mongodb image
+- apiVersion: "v1"
+  kind: "ImageStream"
+  metadata:
+    name: "thermostat-mongodb-32-rhel7"
+    labels:
+      app-group: "thermostat-online-starter"
+  spec:
+    dockerImageRepository: "registry.access.redhat.com/rhscl/mongodb-32-rhel7"
+########################
+## DEPLOYMENT CONFIGS ##
+########################
+# mongodb dc
+- apiVersion: "v1"
+  kind: "DeploymentConfig"
+  metadata:
+    name: "thermostat-mongodb-dc"
+    labels:
+      app: "thermostat-mongodb-app"
+      app-group: "thermostat-online-starter"
+    annotations:
+      template.alpha.openshift.io/wait-for-ready: "true"
+  spec:
+    triggers:
+    - type: "ConfigChange"
+    - type: "ImageChange"
+      imageChangeParams:
+        automatic: true
+        containerNames:
+        - thermostat-mongodb-container
+        from:
+          kind: "ImageStreamTag"
+          name: "thermostat-mongodb-32-rhel7:latest"
+    template:
+      metadata:
+        labels:
+          app: "thermostat-mongodb-app"
+          app-group: "thermostat-online-starter"
+      spec:
+        containers:
+        - name: "thermostat-mongodb-container"
+          image: "thermostat-mongodb-32-rhel7:latest"
+          imagePullPolicy: "Always"
+          env:
+          - name: "MONGODB_ADMIN_PASSWORD"
+            value: "arst"
+          - name: "MONGODB_DATABASE"
+            value: "thermostat"
+          - name: "MONGODB_PASSWORD"
+            value: "mongo"
+          - name: "MONGODB_USER"
+            value: "mongo"
+          # OSO Starter: Set container memory limit to 1/4 of our total quota
+          resources:
+            limits:
+              memory: "256Mi"
+          volumeMounts:
+          - mountPath: "/var/lib/mongodb/data"
+            name: "thermostat-mongo-storage"
+        volumes:
+        - name: "thermostat-mongo-storage"
+          emptyDir: {}
+    selector:
+      app: "thermostat-mongodb-app"
+    replicas: 1
+    strategy:
+      type: "Recreate"
+##############
+## SERVICES ##
+##############
+# mongo service
+- apiVersion: "v1"
+  kind: "Service"
+  metadata:
+    name: "thermostat-mongodb-svc"
+    labels:
+      app: "thermostat-mongodb-app"
+      app-group: "thermostat-online-starter"
+  spec:
+    selector:
+      app: "thermostat-mongodb-app"
+    ports:
+    - name: 27017-tcp
+      protocol: TCP
+      port: 27017
+      targetPort: 27017
