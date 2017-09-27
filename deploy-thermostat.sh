@@ -101,7 +101,22 @@ follow_build() {
   local build_name="$2"
 
   echo "Building ${build_name}..."
-  "${OC}" "${OC_ARGS[@]}" logs -f "bc/${build_config}"
+  # Retry for num_retries until a build is started
+  local num_retries=10
+  for i in $(seq ${num_retries})
+  do
+    "${OC}" "${OC_ARGS[@]}" logs -f "bc/${build_config}"
+    if [ $? -eq 0 ]; then
+      break
+    else
+      if [ $i -eq ${num_retries} ]; then
+        echo "Build was not started after ${num_retries} seconds" >&2
+        exit 1
+      fi
+      echo "Retrying in 1 second" >&2
+      sleep 1
+    fi
+  done
   local build_phase=$("${OC}" "${OC_ARGS[@]}" get -o custom-columns=:.status.phase --no-headers builds "${build_config}-1")
   if [ "${build_phase}" != "Complete" ]; then
     local err_msg=$("${OC}" "${OC_ARGS[@]}" get -o custom-columns=:.status.message --no-headers builds "${build_config}-1")
