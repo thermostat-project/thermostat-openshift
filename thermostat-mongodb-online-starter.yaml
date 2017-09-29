@@ -16,6 +16,50 @@ objects:
       app-group: "thermostat-online-starter"
   spec:
     dockerImageRepository: "registry.access.redhat.com/rhscl/mongodb-32-rhel7"
+#################
+## CONFIG MAPS ##
+#################
+- apiVersion: "v1"
+  kind: "ConfigMap"
+  metadata:
+    name: "thermostat-mongodb-config"
+    labels:
+      app-group: "thermostat-online-starter"
+  data:
+    mongod.conf: |+
+      ##
+      ## For list of options visit:
+      ## https://docs.mongodb.org/manual/reference/configuration-options/
+      ##
+
+      # systemLog Options - How to do logging
+      systemLog:
+        # Runs the mongod in a quiet mode that attempts to limit the amount of output
+        quiet: true
+
+
+      # net Options - Network interfaces settings
+      net:
+        # Specify port number (27017 by default)
+        port: 27017
+
+
+      # storage Options - How and Where to store data
+      storage:
+        # Directory for datafiles (defaults to /data/db/)
+        dbPath: /var/lib/mongodb/data
+        # Limit WiredTiger cache size to avoid consuming too much memory
+        wiredTiger:
+          engineConfig:
+             configString : cache_size=96M
+
+
+      # replication Options - Configures replication
+      replication:
+        # Specifies a maximum size in megabytes for the replication operation log (i.e. the oplog,
+        # 5% of disk space by default)
+        oplogSizeMB: 64
+
 ########################
 ## DEPLOYMENT CONFIGS ##
 ########################
@@ -66,9 +110,19 @@ objects:
           volumeMounts:
           - mountPath: "/var/lib/mongodb/data"
             name: "thermostat-mongo-storage"
+            # OSO Starter: Override mongod.conf to support cache sizes under 1GiB
+          - mountPath: "/etc/mongod.conf"
+            name: "mongodb-config-volume"
+            # Workaround SELinux labelling bug for single file mounts, as suggested in
+            # https://bugzilla.redhat.com/show_bug.cgi?id=1481617#c1
+            subPath: "..data/mongod.conf"
         volumes:
         - name: "thermostat-mongo-storage"
           emptyDir: {}
+        - name: "mongodb-config-volume"
+          configMap:
+            name: "thermostat-mongodb-config"
+            defaultMode: 0660
     selector:
       app: "thermostat-mongodb-app"
     replicas: 1
