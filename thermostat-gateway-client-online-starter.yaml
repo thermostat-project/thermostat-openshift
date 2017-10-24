@@ -32,7 +32,7 @@ objects:
         env:
           # OSO Starter: Limit JVM memory usage and skip tests
         - name: "MAVEN_OPTS"
-          value: "-XX:MaxRAM=256m -DskipTests=true"
+          value: "-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:+UseSerialGC -DskipTests=true"
     output:
       to:
         kind: "ImageStreamTag"
@@ -74,7 +74,7 @@ objects:
           # OSO Starter: Attempt to limit Node.js memory consumption
           # https://stackoverflow.com/a/30254608
         - name: "NODE_ARGS"
-          value: "--max-executable-size=192 --max-old-space-size=512 --max-semi-space-size=2"
+          value: "--max-executable-size=192 --max-old-space-size=768 --max-semi-space-size=2"
     output:
       to:
         kind: "ImageStreamTag"
@@ -92,7 +92,7 @@ objects:
     labels:
       app-group: "thermostat-online-starter"
   spec:
-    dockerImageRepository: "docker.io/icedtea/thermostat-web-gateway-client-builder"
+    dockerImageRepository: "docker.io/icedtea/thermostat-web-gateway-client-32bit-builder"
 # gateway image
 - apiVersion: "v1"
   kind: "ImageStream"
@@ -161,9 +161,15 @@ objects:
             value: "mongo"
           - name: "BASIC_AUTH_CONFIG"
             value: "/etc/basic-auth-config/basic-config.properties"
-            # OSO Starter: Limit Java heap size to prevent OOM
-          - name: "JAVA_TOOL_OPTIONS"
-            value: "-Xmx128m"
+            # OSO Starter: Respect container memory limits, and use serial GC since we have 1 CPU
+          - name: "THERMOSTAT_GATEWAY_EXT_JAVA_OPTS"
+            value: >- 
+              -XX:+UseParallelGC -XX:MinHeapFreeRatio=5
+              -XX:MaxHeapFreeRatio=10 -XX:GCTimeRatio=4
+              -XX:AdaptiveSizePolicyWeight=90 -Xms20M -Xmx128M -Xss256k
+              -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap
+              -Dsun.zip.disableMemoryMapping=true
+              -XX:NativeMemoryTracking=summary
           # OSO Starter: Set container memory limit to 1/4 of our total quota
           resources:
             limits:

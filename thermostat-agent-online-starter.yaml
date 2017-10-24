@@ -29,7 +29,7 @@ objects:
         env:
           # OSO Starter: Limit JVM memory usage and skip tests
         - name: "MAVEN_OPTS"
-          value: "-XX:MaxRAM=256m -DskipTests=true"
+          value: "-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:+UseSerialGC -DskipTests=true"
         from:
           kind: "ImageStreamTag"
           name: "thermostat-agent-wildfly-ex-builder:latest"
@@ -205,6 +205,9 @@ objects:
             value: "${KEYSTORE_PASS}"
           - name: "THERMOSTAT_DISABLE_HOSTNAME_VERIFICATION"
             value: "true"
+          # OSO Starter: Respect container memory limits
+          - name: "JAVA_TOOL_OPTIONS"
+            value: "-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
           volumeMounts:
             - name: "gateway-cert-volume"
               mountPath: "/etc/gateway-cert-secret"
