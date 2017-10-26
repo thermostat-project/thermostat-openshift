@@ -180,7 +180,7 @@ objects:
           - name: "THERMOSTAT_AGENT_USERNAME"
             value: "agent"
           - name: "THERMOSTAT_COMMANDS_URL"
-            value: "wss://thermostat-gateway-client-svc:30000/commands/v1"
+            value: "wss://thermostat-gateway-client-svc:30000/commands/0.0.1"
           - name: "THERMOSTAT_HOST_CPU_URL"
             value: "https://thermostat-gateway-client-svc:30000/system-cpu/0.0.1"
           - name: "THERMOSTAT_HOST_MEMORY_URL"
